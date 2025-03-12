@@ -15,7 +15,7 @@
 
 # Antonin Bas (antonin@barefootnetworks.com)
 
-FROM p4lang/third-party:latest
+FROM jafingerhut/third-party:latest
 LABEL maintainer="P4 Developers <p4-dev@lists.p4.org>"
 LABEL description="This Docker image includes only the most widely-used PI \
 artifacts: PI core and P4Runtime. It does not include the Thrift-based PI \
@@ -40,10 +40,9 @@ ENV PI_DEPS automake \
             libboost-thread-dev \
             libtool \
             pkg-config
-ENV PI_RUNTIME_DEPS libboost-system1.71.0 \
-                    libboost-thread1.71.0 \
-                    python3 \
-                    python-is-python3
+ENV PI_RUNTIME_DEPS libboost-system1.83.0 \
+                    libboost-thread1.83.0 \
+                    python3
 
 COPY . /PI/
 WORKDIR /PI/
