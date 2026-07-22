@@ -1,4 +1,5 @@
 /* Copyright 2013-present Barefoot Networks, Inc.
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +32,8 @@ void pi_logs_off();
 #define PI_LOG_ERROR(...) \
   if (_logs_on) fprintf(stderr, __VA_ARGS__)
 #else
-#define PI_LOG_DEBUG
-#define PI_LOG_ERROR
+#define PI_LOG_DEBUG(...)
+#define PI_LOG_ERROR(...)
 #endif
 
 #endif  // PI_SRC_UTILS_LOGGING_H_

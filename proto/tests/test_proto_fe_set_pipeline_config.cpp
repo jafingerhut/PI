@@ -1,4 +1,5 @@
 /* Copyright 2013-present Barefoot Networks, Inc.
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,9 +73,9 @@ class DeviceMgrSetPipelineConfigTest : public DeviceMgrBaseTest {
         .Times(AnyNumber());
 
     p4v1::ForwardingPipelineConfig config;
-    config.set_allocated_p4info(p4info_proto);
+    config.unsafe_arena_set_allocated_p4info(p4info_proto);
     auto status = mgr.pipeline_config_set(action, config);
-    config.release_p4info();
+    config.unsafe_arena_release_p4info();
     return status;
   }
 };

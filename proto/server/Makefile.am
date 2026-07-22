@@ -1,6 +1,11 @@
+# SPDX-FileCopyrightText: 2017 Barefoot Networks, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
 AM_CPPFLAGS = \
+-I$(top_srcdir) \
 -I$(top_srcdir)/frontend \
 -isystem $(top_builddir)/cpp_out \
 -isystem $(top_builddir)/grpc_out
@@ -18,7 +23,6 @@ gnmi.h \
 gnmi_dummy.cpp \
 log.h \
 pi_server.cpp \
-shared_mutex.h \
 uint128.h \
 uint128.cpp \
 pi_server_testing.h
@@ -35,6 +39,6 @@ $(top_builddir)/frontend/libpifeproto.la \
 $(top_builddir)/libpiprotogrpc.la \
 $(top_builddir)/libpiprotobuf.la \
 $(PROTOBUF_LIBS) $(GRPC_LIBS) \
-$(BOOST_THREAD_LIB) $(BOOST_SYSTEM_LIB)
+$(BOOST_SYSTEM_LIB)
 # causes issue with libpiproto as it includes a version of google.rpc.Status
 # -lgrpc++_error_details

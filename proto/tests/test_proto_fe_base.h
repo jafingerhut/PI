@@ -1,4 +1,5 @@
 /* Copyright 2019-present Barefoot Networks, Inc.
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,12 +86,12 @@ class DeviceMgrBaseTest : public ProtoFrontendBaseTest {
         .Times(::testing::AnyNumber());
 
     p4v1::ForwardingPipelineConfig config;
-    config.set_allocated_p4info(p4info_proto);
+    config.unsafe_arena_set_allocated_p4info(p4info_proto);
     config.mutable_cookie()->set_cookie(cookie);
     config.set_p4_device_config(device_config);
     auto status = mgr.pipeline_config_set(
         p4v1::SetForwardingPipelineConfigRequest::VERIFY_AND_COMMIT, config);
-    config.release_p4info();
+    config.unsafe_arena_release_p4info();
     return status;
   }
 
@@ -100,9 +101,9 @@ class DeviceMgrBaseTest : public ProtoFrontendBaseTest {
     auto update = request.add_updates();
     update->set_type(type);
     auto entity = update->mutable_entity();
-    entity->set_allocated_table_entry(entry);
+    entity->unsafe_arena_set_allocated_table_entry(entry);
     auto status = mgr.write(request);
-    entity->release_table_entry();
+    entity->unsafe_arena_release_table_entry();
     return status;
   }
 
@@ -129,9 +130,9 @@ class DeviceMgrBaseTest : public ProtoFrontendBaseTest {
   DeviceMgr::Status read_table_entry(p4v1::TableEntry *table_entry,
                                      p4v1::ReadResponse *response) {
     p4v1::Entity entity;
-    entity.set_allocated_table_entry(table_entry);
+    entity.unsafe_arena_set_allocated_table_entry(table_entry);
     auto status = mgr.read_one(entity, response);
-    entity.release_table_entry();
+    entity.unsafe_arena_release_table_entry();
     return status;
   }
 

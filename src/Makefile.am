@@ -1,7 +1,12 @@
+# SPDX-FileCopyrightText: 2016 Barefoot Networks, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 AM_CPPFLAGS += \
 -I$(top_srcdir)/include \
 -I$(top_srcdir)/lib \
--isystem$(top_srcdir)/third_party/cJSON/include
+-isystem$(top_srcdir)/third_party/cJSON/include \
+-isystem$(top_srcdir)/third_party/uthash/src
 
 # TODO(antonin): act_prof should be in a different directory (externs)
 libpip4info_la_SOURCES = \

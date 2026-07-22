@@ -1,4 +1,6 @@
 /* Copyright 2013-present Barefoot Networks, Inc.
+ * Copyright 2021 VMware, Inc.
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +16,7 @@
  */
 
 /*
- * Antonin Bas (antonin@barefootnetworks.com)
+ * Antonin Bas
  *
  */
 
@@ -103,12 +105,13 @@ namespace {
 
 template<typename T,
          typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
-std::string to_binary(T v, int bitwidth) {
+std::string to_binary(T v, int bitwidth, bool canonical = false) {
   std::string s;
   while (bitwidth > 0) {
     s.push_back(static_cast<char>(v % 256));
     v /= 256;
     bitwidth -= 8;
+    if (canonical && v == 0) break;
   }
   std::reverse(s.begin(), s.end());
   return s;
@@ -195,10 +198,10 @@ struct ValueIterator {
 
 class DeviceMgrPacketIOMetadataTest : public DeviceMgrPacketIOTest {
  public:
-  static constexpr size_t num = 3;
-  static constexpr int bw1 = 2;
-  static constexpr int bw2 = 9;
-  static constexpr int bw3 = 5;
+  static constexpr int num = 3;
+  static constexpr int bw1 = 7;
+  static constexpr int bw2 = 7;
+  static constexpr int bw3 = 2;
   using VType = std::array<int, num>;
 
  protected:
@@ -279,7 +282,7 @@ TEST_F(DeviceMgrPacketIOMetadataTest, PacketIn) {
   for (const auto &v : values) {
     received = false;
     BitPattern pattern;
-    for (uint32_t id = 0; id < num; id++)
+    for (int id = 0; id < num; id++)
       pattern.push_back(v[id], bitwidths[id]);
     std::string packet = pattern.bits + payload;
     mock->packetin_inject(packet);
@@ -288,7 +291,7 @@ TEST_F(DeviceMgrPacketIOMetadataTest, PacketIn) {
     uint32_t id = 0;
     for (const auto &metadata : packet_in.metadata()) {
       EXPECT_EQ(id + 1, metadata.metadata_id());
-      EXPECT_EQ(to_binary(v[id], bitwidths[id]), metadata.value());
+      EXPECT_EQ(to_binary(v[id], bitwidths[id], true), metadata.value());
       id++;
     }
   }
@@ -302,10 +305,54 @@ TEST_F(DeviceMgrPacketIOMetadataTest, PacketOut) {
     auto *packet_out = msg.mutable_packet();
     packet_out->set_payload(payload);
     BitPattern pattern;
-    for (uint32_t id = 0; id < num; id++) {
+    for (int id = 0; id < num; id++) {
       auto metadata = packet_out->add_metadata();
       metadata->set_metadata_id(id + 1);
-      metadata->set_value(to_binary(v[id], bitwidths[id]));
+      metadata->set_value(to_binary(v[id], bitwidths[id], false));
+      pattern.push_back(v[id], bitwidths[id]);
+    }
+    PacketOutMatcher matcher(pattern.bits, payload);
+    EXPECT_CALL(*mock, packetout_send(_, _)).With(AllArgs(Truly(matcher)));
+    auto status = mgr.stream_message_request_handle(msg);
+    EXPECT_EQ(status.code(), Code::OK);
+  }
+}
+
+TEST_F(DeviceMgrPacketIOMetadataTest, PacketOutMetadataOutOfOrder) {
+  std::string payload(10, '\xab');
+  ValueIterator<VType> values(bitwidths, steps);
+  for (const auto &v : values) {
+    p4v1::StreamMessageRequest msg;
+    auto *packet_out = msg.mutable_packet();
+    packet_out->set_payload(payload);
+    BitPattern pattern;
+    for (int id = num - 1; id >= 0; id--) {
+      auto metadata = packet_out->add_metadata();
+      metadata->set_metadata_id(id + 1);
+      metadata->set_value(to_binary(v[id], bitwidths[id], false));
+    }
+    for (int id = 0; id < num; id++) {
+      pattern.push_back(v[id], bitwidths[id]);
+    }
+    PacketOutMatcher matcher(pattern.bits, payload);
+    EXPECT_CALL(*mock, packetout_send(_, _)).With(AllArgs(Truly(matcher)));
+    auto status = mgr.stream_message_request_handle(msg);
+    EXPECT_EQ(status.code(), Code::OK);
+  }
+}
+
+TEST_F(DeviceMgrPacketIOMetadataTest, PacketOutCanonicalMetadata) {
+  std::string payload(10, '\xab');
+  ValueIterator<VType> values(bitwidths, steps);
+  for (const auto &v : values) {
+    p4v1::StreamMessageRequest msg;
+    auto *packet_out = msg.mutable_packet();
+    packet_out->set_payload(payload);
+    BitPattern pattern;
+    for (int id = 0; id < num; id++) {
+      auto metadata = packet_out->add_metadata();
+      metadata->set_metadata_id(id + 1);
+      metadata->set_value(to_binary(v[id], bitwidths[id], true));
       pattern.push_back(v[id], bitwidths[id]);
     }
     PacketOutMatcher matcher(pattern.bits, payload);

@@ -1,4 +1,6 @@
 /* Copyright 2013-present Barefoot Networks, Inc.
+ * Copyright 2021 VMware, Inc.
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +16,7 @@
  */
 
 /*
- * Antonin Bas (antonin@barefootnetworks.com)
+ * Antonin Bas
  *
  */
 
@@ -28,7 +30,9 @@
 
 #include "google/rpc/code.pb.h"
 
+#include "common.h"
 #include "report_error.h"
+#include "status_macros.h"
 
 namespace p4v1 = ::p4::v1;
 namespace p4configv1 = ::p4::config::v1;
@@ -41,6 +45,9 @@ namespace fe {
 namespace proto {
 
 using Code = ::google::rpc::Code;
+
+using common::bytestring_p4rt_to_pi;
+using common::bytestring_pi_to_p4rt;
 
 namespace {
 
@@ -94,6 +101,8 @@ void generic_extract(const char *data, int bit_offset, int bitwidth,
   }
 }
 
+// Successive calls to generic_deparse must be done in the correct order,
+// i.e. according to the order in which the fields are defined in the header.
 void generic_deparse(const char *data, int bitwidth, char *dst,
                      int hdr_offset) {
   if (bitwidth == 0) return;
@@ -173,7 +182,11 @@ class PacketInMutate {
       generic_extract(pkt, bit_offset, bitwidth, buffer.data());
       bit_offset += (bitwidth % 8);
       pkt += (bitwidth / 8);
-      metadata->set_value(buffer.data(), buffer.size());
+      if (bit_offset >= 8) {
+          pkt += (bit_offset / 8);
+          bit_offset = bit_offset % 8;
+      }
+      metadata->set_value(bytestring_pi_to_p4rt(buffer.data(), buffer.size()));
     }
     return true;
   }
@@ -190,6 +203,7 @@ namespace {
 class Id2Offset {
  public:
   struct Offset {
+    int idx;
     int byte_offset;
     int bit_offset;
     int bitwidth;
@@ -201,10 +215,11 @@ class Id2Offset {
 
   explicit Id2Offset(const ControllerPacketMetadata &metadata_hdr) {
     int nbits = 0;
-    for (const auto &metadata : metadata_hdr.metadata()) {
+    for (int i = 0; i < metadata_hdr.metadata_size(); i++) {
+      const auto &metadata = metadata_hdr.metadata(i);
       auto id = metadata.id();
       auto bitwidth = metadata.bitwidth();
-      offsets.emplace(id, Offset{nbits / 8, nbits % 8, bitwidth});
+      offsets.emplace(id, Offset{i, nbits / 8, nbits % 8, bitwidth});
       nbits += bitwidth;
     }
   }
@@ -233,7 +248,8 @@ class PacketOutMutate {
   static constexpr const char name[] = "packet_out";
 
   explicit PacketOutMutate(const ControllerPacketMetadata &metadata_hdr)
-      : metadata_hdr(metadata_hdr), id2offset(metadata_hdr) {
+      : metadata_hdr(metadata_hdr), metadata_cnt(metadata_hdr.metadata_size()),
+        id2offset(metadata_hdr) {
     nbytes = compute_nbytes(metadata_hdr);
   }
 
@@ -243,10 +259,21 @@ class PacketOutMutate {
   // the current behavior.
   Status operator ()(const p4v1::PacketOut &packet_out,
                      std::string *pkt) const {
-    pkt->clear();
-    const auto &payload = packet_out.payload();
-    pkt->reserve(nbytes + payload.size());
-    pkt->append(nbytes, 0);
+    struct Ptr {
+      Ptr() = default;
+      Ptr(const Id2Offset::Offset *offset, const std::string *value)
+          : offset(offset), value(value) { }
+
+      const Id2Offset::Offset *offset{nullptr};
+      const std::string *value{nullptr};
+    };
+    // We need to do a first pass to order the metadata fields provided by the
+    // P4Runtime client, as successive calls to generic_deparse must be done
+    // according to the order in which fields are defined in the controller
+    // header.
+    // In the future, we may want to update the generic_deparse implementation
+    // to lift this restriction (if it comes with a performance benefit).
+    std::vector<Ptr> ptrs(metadata_cnt);
     for (const auto &metadata : packet_out.metadata()) {
       auto offset_it = id2offset.find(metadata.metadata_id());
       if (offset_it == id2offset.end()) {
@@ -254,8 +281,18 @@ class PacketOutMutate {
                             "Unknown metadata id in PacketOut message");
       }
       const auto &offset = offset_it->second;
-      generic_deparse(metadata.value().data(), offset.bitwidth,
-                      &(*pkt)[offset.byte_offset], offset.bit_offset);
+      ptrs[offset.idx] = Ptr{&offset, &metadata.value()};
+    }
+    pkt->clear();
+    const auto &payload = packet_out.payload();
+    pkt->reserve(nbytes + payload.size());
+    pkt->append(nbytes, 0);
+    for (const auto &ptr : ptrs) {
+      if (!ptr.offset) continue;  // missing field in PacketOut message
+      ASSIGN_OR_RETURN(
+          auto value, bytestring_p4rt_to_pi(*ptr.value, ptr.offset->bitwidth));
+      generic_deparse(value.data(), ptr.offset->bitwidth,
+                      &(*pkt)[ptr.offset->byte_offset], ptr.offset->bit_offset);
     }
     pkt->append(payload);
     RETURN_OK_STATUS();
@@ -264,6 +301,7 @@ class PacketOutMutate {
  private:
   ControllerPacketMetadata metadata_hdr;
   size_t nbytes{0};
+  int metadata_cnt{0};
   Id2Offset id2offset;
 };
 

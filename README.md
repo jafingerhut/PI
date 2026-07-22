@@ -1,15 +1,29 @@
+<!--
+SPDX-FileCopyrightText: 2016 Barefoot Networks, Inc.
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # PI LIBRARY REPOSITORY
 
-[![Build Status](https://travis-ci.org/p4lang/PI.svg?branch=main)](https://travis-ci.org/p4lang/PI)
+![Build Status](https://github.com/p4lang/PI/actions/workflows/test.yml/badge.svg?branch=main)
 
 **This repository has submodules; after cloning it you should run `git submodule
   update --init --recursive`.**
 
 ## Dependencies
 
-### Base dependencies
+### Compiler versions
 
-- Judy
+The following compiler versions are supported:
+
+- gcc / g++: >= 5
+- clang / clang++: >= 3.8
+
+The following compiler versions are tested in CI:
+
+- gcc / g++: 9.3
+- clang / clang++: 8, 10
 
 ### Dependencies based on configure flags
 
@@ -31,47 +45,54 @@ to install different dependencies.
   required to run some of the generated binaries uner valgrind
 - valgrind, as some tests use it to check for memory errors
 - Boost library, for some of the C++ tests: we currently require
-  `boost/optional.hpp` and `boost/functional/hash.hpp`
+  `boost/functional/hash.hpp`
 
 ### Installing dependencies from package repositories
 
-| Dependency | Name of Debian package |
-| ---------- | ---------------------- |
-| [Judy](http://judy.sourceforge.net/) | libjudy-dev |
-| [readline](https://tiswww.case.edu/php/chet/readline/rltop.html) | libreadline-dev |
-| valgrind | valgrind |
-| libtool binary | libtool-bin |
-| Boost library | libboost-dev libboost-system-dev libboost-thread-dev |
+| Dependency | Ubuntu / Debian | Fedora |
+| ---------- | --- | --- |
+| [readline](https://tiswww.case.edu/php/chet/readline/rltop.html) | libreadline-dev | readline-devel |
+| valgrind | valgrind | valgrind |
+| libtool binary | libtool-bin | libtool |
+| Boost library | libboost-dev libboost-system-dev libboost-thread-dev | boost-devel boost-system boost-thread |
+| [gRPC](https://github.com/grpc/grpc) | Install from source (see below) | grpc-devel grpc-plugins |
+| [Protobuf](https://github.com/google/protobuf) | Install from source (see below) | protobuf-devel |
 
 ### Installing other dependencies from source
 
-Some dependencies are not available as Debian packages or the available version
-is not the right one.
+Some dependencies are not available as packages or the available version
+is not compatible.
 
 - [bmv2](https://github.com/p4lang/behavioral-model) and all its dependencies:
   follow instructions in the [bmv2
   README](https://github.com/p4lang/behavioral-model/blob/master/README.md)
 - [nanomsg 1.0.0](https://github.com/nanomsg/nanomsg/releases/tag/1.0.0)
-- [Protobuf v3.6.1](https://github.com/google/protobuf/releases/tag/v3.6.1):
+- [Protobuf v3.18.1](https://github.com/google/protobuf/releases/tag/v3.18.1):
 ```
-git clone https://github.com/google/protobuf.git
+git clone --depth=1 -b v3.18.1 https://github.com/google/protobuf.git
 cd protobuf/
-git checkout tags/v3.6.1
 ./autogen.sh
 ./configure
 make
 [sudo] make install
 [sudo] ldconfig
 ```
-- [gRPC v1.17.2](https://github.com/grpc/grpc/releases/tag/v1.17.2):
+- [gRPC v1.43.2](https://github.com/grpc/grpc/releases/tag/v1.43.2):
 ```
-git clone https://github.com/google/grpc.git
+git clone --depth=1 -b v1.43.2 https://github.com/google/grpc.git
 cd grpc/
-git checkout tags/v1.17.2
 git submodule update --init --recursive
+mkdir -p "cmake/build"
+pushd "cmake/build"
+cmake \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DgRPC_INSTALL=ON \
+  -DgRPC_BUILD_TESTS=OFF \
+  -DgRPC_SSL_PROVIDER=package \
+  ../..
 make
 [sudo] make install
-[sudo] ldconfig
+popd
 ```
 - [sysrepo](https://github.com/sysrepo/sysrepo) and all its dependencies: see
   instructions in [proto/README.md](proto/README.md)

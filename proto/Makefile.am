@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2016 Barefoot Networks, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
 # Remove -Werror
@@ -9,7 +13,7 @@ endif
 
 SUBDIRS = . third_party p4info frontend server $(MAYBE_PROTO_DEMO) tests
 
-PROTOFLAGS = -I$(abs_srcdir) -I$(abs_builddir)
+PROTOFLAGS += -I$(abs_srcdir) -I$(abs_builddir)
 
 # This makefile relies on the symbolic link that we create google ->
 # googleapis/google. Without it, we run into some issues with `protoc`. An

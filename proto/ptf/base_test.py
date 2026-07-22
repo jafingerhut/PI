@@ -1,4 +1,5 @@
 # Copyright 2013-present Barefoot Networks, Inc.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,6 +26,7 @@ import sys
 import threading
 import time
 import queue
+import unittest
 
 import ptf
 from ptf.base_tests import BaseTest
@@ -57,6 +59,10 @@ def stringify(n, length=0):
     represented in the fewest number of bytes it does fit into without
     loss of precision.  It always returns a string at least one byte
     long, even if n=length=0."""
+    assert isinstance(length, int)
+    assert length >= 0
+    assert isinstance(n, int)
+    assert n >= 0
     if length == 0 and n == 0:
         length = 1
     else:
@@ -64,7 +70,7 @@ def stringify(n, length=0):
         n_size_bytes = (n_size_bits + 7) // 8
         if n_size_bytes > length:
             length = n_size_bytes
-    s = n.to_bytes(length, byteorder='big')
+    s = n.to_bytes(length, byteorder="big")
     return s
 
 def ipv4_to_binary(addr):
@@ -73,10 +79,11 @@ def ipv4_to_binary(addr):
     to a string with binary contents expected by the Python P4Runtime
     client operations."""
     bytes_ = [int(b, 10) for b in addr.split('.')]
-    assert len(bytes_) == 4
-    # Note: The bytes() call below will throw exception if any
-    # elements of bytes_ is outside of the range [0, 255]], so no need
-    # to add a separate check for that here.
+    if len(bytes_) != 4:
+        raise ValueError("Invalid IPv4 address format")
+    for b in bytes_:
+        if b < 0 or b > 255:
+            raise ValueError("IPv4 address contains out-of-range value")
     return bytes(bytes_)
 
 def mac_to_binary(addr):
@@ -86,10 +93,11 @@ def mac_to_binary(addr):
     binary contents expected by the Python P4Runtime client
     operations."""
     bytes_ = [int(b, 16) for b in addr.split(':')]
-    assert len(bytes_) == 6
-    # Note: The bytes() call below will throw exception if any
-    # elements of bytes_ is outside of the range [0, 255]], so no need
-    # to add a separate check for that here.
+    if len(bytes_) != 6:
+        raise ValueError("Invalid MAC address format")
+    for b in bytes_:
+        if b < 0 or b > 255:
+            raise ValueError("MAC address contains out-of-range value")
     return bytes(bytes_)
 
 # Used to indicate that the gRPC error Status object returned by the server has
@@ -666,3 +674,84 @@ def autocleanup(f):
         finally:
             test.undo_write_requests(test._reqs)
     return handle
+
+
+class TestStringify(unittest.TestCase):
+    def test_zero(self):
+        """Test for 0 value"""
+        self.assertEqual(stringify(0, 1), b'\x00')
+        self.assertEqual(stringify(0, 2), b'\x00\x00')
+
+    def test_single_byte(self):
+        """Test for single-byte values"""
+        self.assertEqual(stringify(42, 1), b'*')
+        self.assertEqual(stringify(255, 1), b'\xff')
+
+    def test_multi_byte(self):
+        """Test for multi-byte values"""
+        self.assertEqual(stringify(512, 2), b'\x02\x00')
+        self.assertEqual(stringify(1000, 2), b'\x03\xe8')
+
+    def test_large_value_overflow(self):
+        """Test for a large value that doesn't fit in 'length' bytes"""
+        self.assertEqual(stringify(1000, 1), b'\x03\xe8')
+
+    def test_zero_length(self):
+        """Test for length=0"""
+        self.assertEqual(stringify(0, 0), b'\x00')
+        self.assertEqual(stringify(512, 0), b'\x02\x00')
+
+    def test_default_length(self):
+        """Test for length=None (default length calculation)"""
+        self.assertEqual(stringify(0), b'\x00')
+        self.assertEqual(stringify(255), b'\xff')
+        self.assertEqual(stringify(512), b'\x02\x00')
+        self.assertEqual(stringify(1000), b'\x03\xe8')
+
+
+class TestIPv4ToBinary(unittest.TestCase):
+    def test_valid_ipv4(self):
+        """Test valid IPv4 addresses"""
+        self.assertEqual(ipv4_to_binary('0.0.0.0'), b'\x00\x00\x00\x00')
+        self.assertEqual(ipv4_to_binary('192.168.0.1'), b'\xc0\xa8\x00\x01')
+        self.assertEqual(ipv4_to_binary('255.255.255.255'), b'\xff\xff\xff\xff')
+
+    def test_invalid_ipv4(self):
+        """Test invalid IPv4 addresses (less or more than 4 bytes)"""
+        with self.assertRaises(ValueError):
+            ipv4_to_binary('10.0.1')
+        with self.assertRaises(ValueError):
+            ipv4_to_binary('10.0.1.2.3')
+
+    def test_out_of_range(self):
+        """Test IPv4 address with out-of-range values (above 255)"""
+        with self.assertRaises(ValueError):
+            ipv4_to_binary('256.0.0.0')
+        with self.assertRaises(ValueError):
+            ipv4_to_binary('10.1.300.4')
+
+
+class TestMacToBinary(unittest.TestCase):
+    def test_valid_mac(self):
+        """Test valid MAC addresses"""
+        self.assertEqual(mac_to_binary('00:00:00:00:00:00'), b'\x00\x00\x00\x00\x00\x00')
+        self.assertEqual(mac_to_binary('00:de:ad:be:ef:ff'), b'\x00\xde\xad\xbe\xef\xff')
+        self.assertEqual(mac_to_binary('a0:b1:c2:d3:e4:f5'), b'\xa0\xb1\xc2\xd3\xe4\xf5')
+
+    def test_invalid_mac(self):
+        """Test invalid MAC addresses (less or more than 6 bytes)"""
+        with self.assertRaises(ValueError):
+            mac_to_binary('00:de:ad:be:ef')
+        with self.assertRaises(ValueError):
+            mac_to_binary('00:de:ad:be:ef:ff:aa')
+
+    def test_out_of_range(self):
+        """Test MAC address with out-of-range values (above 255)"""
+        with self.assertRaises(ValueError):
+            mac_to_binary('00:de:ad:be:ef:gg')
+        with self.assertRaises(ValueError):
+            mac_to_binary('00:de:ad:be:ef:256')
+
+
+if __name__ == '__main__':
+    unittest.main()

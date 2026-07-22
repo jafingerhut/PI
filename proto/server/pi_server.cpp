@@ -1,4 +1,6 @@
 /* Copyright 2013-present Barefoot Networks, Inc.
+ * Copyright 2022 VMware, Inc.
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +16,7 @@
  */
 
 /*
- * Antonin Bas (antonin@barefootnetworks.com)
+ * Antonin Bas
  *
  */
 
@@ -24,11 +26,14 @@
 // #include <grpcpp/support/error_details.h>
 
 #include <memory>
+#include <mutex>
 #include <set>
+#include <shared_mutex>
 #include <string>
 #include <thread>
 #include <unordered_map>
 
+#include "PI/proto/pi_server.h"
 #include "gnmi.h"
 #include "gnmi/gnmi.grpc.pb.h"
 #include "google/rpc/code.pb.h"
@@ -37,10 +42,7 @@
 #include "p4/v1/p4runtime.grpc.pb.h"
 #include "pi_server_testing.h"
 #include "server_config/server_config.h"
-#include "shared_mutex.h"
 #include "uint128.h"
-
-#include "PI/proto/pi_server.h"
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -303,12 +305,12 @@ class DeviceState {
   }
 
  private:
-  SharedLock shared_lock() const {
-    return ::pi::server::shared_lock(m);
+  std::shared_lock<std::shared_mutex> shared_lock() const {
+    return std::shared_lock<std::shared_mutex>(m);
   }
 
-  UniqueLock unique_lock() const {
-    return ::pi::server::unique_lock(m);
+  std::unique_lock<std::shared_mutex> unique_lock() const {
+    return std::unique_lock<std::shared_mutex>(m);
   }
 
   Connection *get_primary() const {
@@ -350,7 +352,7 @@ class DeviceState {
   static p4serverv1::Config default_server_config;
 
   // protects DeviceMgr, connections, ...
-  mutable SharedMutex m{};
+  mutable std::shared_mutex m{};
   // protects pkt_in_count and ensures sequential writes on the stream
   mutable std::mutex packetin_mutex;
   // protects pkt_out_count
@@ -598,9 +600,9 @@ namespace testing {
 
 void send_packet_in(DeviceMgr::device_id_t device_id, p4v1::PacketIn *packet) {
   p4v1::StreamMessageResponse msg;
-  msg.set_allocated_packet(packet);
+  msg.unsafe_arena_set_allocated_packet(packet);
   Devices::get(device_id)->send_stream_message(&msg);
-  msg.release_packet();
+  msg.unsafe_arena_release_packet();
 }
 
 size_t max_connections() { return DeviceState::max_connections; }
@@ -631,13 +633,55 @@ void PIGrpcServerInitWithConfig(const char *config_text, const char *version) {
   assert(status.code() == ::google::rpc::Code::OK);
 }
 
-void PIGrpcServerRunAddrGnmi(const char *server_address, void *gnmi_service) {
+void PIGrpcServerRunV2(const char *server_address,
+                       void *gnmi_service,
+                       PIGrpcServerSSLOptions_t *ssl_options) {
   server_data = new ::pi::server::ServerData();
   server_data->server_address = std::string(server_address);
   auto &builder = server_data->builder;
+  std::shared_ptr<grpc::ServerCredentials> creds;
+  if (ssl_options == nullptr) {
+    creds = grpc::InsecureServerCredentials();
+  } else {
+    grpc::SslServerCredentialsOptions::PemKeyCertPair pkcp;
+    pkcp.private_key = (ssl_options->pem_private_key == NULL) ?
+        "" : ssl_options->pem_private_key;
+    pkcp.cert_chain = (ssl_options->pem_cert_chain == NULL) ?
+        "" : ssl_options->pem_cert_chain;
+    grpc::SslServerCredentialsOptions ssl_opts;
+    ssl_opts.pem_root_certs = (ssl_options->pem_root_certs == NULL) ?
+        "" : ssl_options->pem_root_certs;
+    ssl_opts.pem_key_cert_pairs.push_back(pkcp);
+    switch (ssl_options->client_auth) {
+      case PI_GRPC_SSL_DONT_REQUEST_CLIENT_CERTIFICATE:
+        ssl_opts.client_certificate_request =
+            GRPC_SSL_DONT_REQUEST_CLIENT_CERTIFICATE;
+        break;
+      case PI_GRPC_SSL_REQUEST_CLIENT_CERTIFICATE_BUT_DONT_VERIFY:
+        ssl_opts.client_certificate_request =
+            GRPC_SSL_REQUEST_CLIENT_CERTIFICATE_BUT_DONT_VERIFY;
+        break;
+      case PI_GRPC_SSL_REQUEST_CLIENT_CERTIFICATE_AND_VERIFY:
+        ssl_opts.client_certificate_request =
+            GRPC_SSL_REQUEST_CLIENT_CERTIFICATE_AND_VERIFY;
+        break;
+      case PI_GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY:
+        ssl_opts.client_certificate_request =
+            GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY;
+        break;
+      case PI_GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY:
+        ssl_opts.client_certificate_request =
+            GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY;
+        break;
+      default:
+        ssl_opts.client_certificate_request =
+            GRPC_SSL_DONT_REQUEST_CLIENT_CERTIFICATE;
+        break;
+    }
+    creds = grpc::SslServerCredentials(ssl_opts);
+  }
   builder.AddListeningPort(
-    server_data->server_address, grpc::InsecureServerCredentials(),
-    &server_data->server_port);
+      server_data->server_address, creds, &server_data->server_port);
   builder.RegisterService(&server_data->pi_service);
   if (gnmi_service != nullptr) {
     server_data->gnmi_service = std::unique_ptr<gnmi::gNMI::Service>(
@@ -657,12 +701,16 @@ void PIGrpcServerRunAddrGnmi(const char *server_address, void *gnmi_service) {
   std::cout << "Server listening on " << server_data->server_address << "\n";
 }
 
+void PIGrpcServerRunAddrGnmi(const char *server_address, void *gnmi_service) {
+  PIGrpcServerRunV2(server_address, gnmi_service, nullptr);
+}
+
 void PIGrpcServerRunAddr(const char *server_address) {
-  PIGrpcServerRunAddrGnmi(server_address, nullptr);
+  PIGrpcServerRunV2(server_address, nullptr, nullptr);
 }
 
 void PIGrpcServerRun() {
-  PIGrpcServerRunAddrGnmi("0.0.0.0:9559", nullptr);
+  PIGrpcServerRunV2("0.0.0.0:9559", nullptr, nullptr);
 }
 
 int PIGrpcServerGetPort() {

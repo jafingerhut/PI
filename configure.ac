@@ -1,3 +1,7 @@
+dnl SPDX-FileCopyrightText: 2016 Barefoot Networks, Inc.
+dnl
+dnl SPDX-License-Identifier: Apache-2.0
+
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -21,11 +25,9 @@ AC_PROG_CXX
 # built if --with-proto=yes)
 # if there is no C++ compiler available or if the C++ compiler doesn't support
 # std=c++11, configure will not fail
-AX_CXX_COMPILE_STDCXX_11([noext],[optional])
+AX_CXX_COMPILE_STDCXX([17], [noext], [optional])
 
-# TODO: this can be removed when the Python scripts are updated to work with
-# python3.
-m4_define_default([_AM_PYTHON_INTERPRETER_LIST], [python python3 python2.7])
+m4_define_default([_AM_PYTHON_INTERPRETER_LIST], [python3 python])
 AM_CONDITIONAL([HAVE_python], [test "$PYTHON" != :])
 
 DX_DOT_FEATURE([ON])
@@ -149,9 +151,6 @@ AC_PREPROC_IFELSE(
     #endif]])],
   [],
   [AC_MSG_FAILURE([Compiler does not define '__BYTE_ORDER__' preprocessor macro])])
-
-# Check for libjudy
-AC_CHECK_LIB([Judy], [Judy1Next], [], [AC_MSG_ERROR([Missing libJudy])])
 
 AM_COND_IF([WITH_CLI], [
   AC_CHECK_LIB([readline], [readline], [],

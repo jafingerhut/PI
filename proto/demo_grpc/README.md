@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2016 Barefoot Networks, Inc.
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Controller - Switch demo using Protobuf & gRPC
 
 ## Dependencies
@@ -28,7 +34,7 @@ the switch. The gRPC server translates the protobuf messages into PI library
 calls (using the PI C++ frontend).
 
 To run the demo, you will need 3 terminal instances:
-- `sudo python 1sw_demo.py --cpu-port veth250`
+- `sudo python3 1sw_demo.py --cpu-port veth250`
 - `sudo ./pi_grpc_server`
 - `sudo ./controller -c simple_router.json -p simple_router.p4info.txt`
 

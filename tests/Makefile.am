@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2016 Barefoot Networks, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
 if WITH_CLI_TESTS
@@ -11,11 +15,13 @@ AM_CPPFLAGS += \
 -I$(top_srcdir)/src \
 -I$(top_srcdir)/lib \
 -I$(top_srcdir)/third_party/unity/include \
--I$(top_srcdir)/third_party/cJSON/include \
+-isystem$(top_srcdir)/third_party/cJSON/include \
+-isystem$(top_srcdir)/third_party/uthash/src \
 -DTESTDATADIR=\"$(abs_srcdir)/testdata\"
 
 TESTS = \
 test_bmv2_json_reader \
+test_read_file \
 test_getnetv \
 test_p4info \
 test_frontends_generic
@@ -24,6 +30,9 @@ common_source = main.c utils.c utils.h
 
 test_bmv2_json_reader_SOURCES = $(common_source) test_bmv2_json_reader.c
 test_bmv2_json_reader_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_BMV2_JSON_READER
+
+test_read_file_SOURCES = $(common_source) test_read_file.c
+test_read_file_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_READ_FILE
 
 test_getnetv_SOURCES = $(common_source) test_getnetv.c
 test_getnetv_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_GETNETV
@@ -36,11 +45,13 @@ test_frontends_generic_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_FRONTENDS_GENERIC
 
 test_all_SOURCES = $(common_source) \
 test_bmv2_json_reader.c \
+test_read_file.c \
 test_getnetv.c \
 test_p4info.c \
 frontends/generic/test.c
 test_all_CPPFLAGS = $(AM_CPPFLAGS) \
 -DTEST_BMV2_JSON_READER \
+-DTEST_READ_FILE \
 -DTEST_GETNETV \
 -DTEST_P4INFO \
 -DTEST_FRONTENDS_GENERIC
@@ -57,6 +68,7 @@ $(top_builddir)/lib/libpitoolkit.la
 
 check_PROGRAMS = \
 test_bmv2_json_reader \
+test_read_file \
 test_getnetv \
 test_p4info \
 test_frontends_generic \

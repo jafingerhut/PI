@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2016 Barefoot Networks, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 [submodule "third_party/googletest"]
 	path = third_party/googletest
 	url = https://github.com/google/googletest
@@ -11,3 +15,6 @@
 [submodule "proto/p4runtime"]
 	path = proto/p4runtime
 	url = https://github.com/p4lang/p4runtime.git
+[submodule "third_party/uthash"]
+	path = third_party/uthash
+	url = https://github.com/troydhanson/uthash.git

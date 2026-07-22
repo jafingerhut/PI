@@ -1,6 +1,10 @@
+# SPDX-FileCopyrightText: 2017 Barefoot Networks, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 **/.git/*
 **/.gitmodules
-**/.travis.yml
+.github
 **/Dockerfile
 **/Dockerfile.bmv2
 **/*.md

@@ -1,3 +1,7 @@
+dnl SPDX-FileCopyrightText: 2016 Barefoot Networks, Inc.
+dnl
+dnl SPDX-License-Identifier: Apache-2.0
+
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -16,12 +20,14 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_LANG_PUSH(C)
 AC_LANG_PUSH(C++)
 
-AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+AX_CXX_COMPILE_STDCXX([17], [noext], [mandatory])
 
-AM_PATH_PYTHON([2.7],, [:])
+AM_PATH_PYTHON([3.5],, [:])
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 
-PKG_CHECK_MODULES([PROTOBUF], [protobuf >= 3.0.0])
+dnl we need >= 3.12 because P4Runtime Protobuf files now require support for
+dnl proto3 optional fields.
+PKG_CHECK_MODULES([PROTOBUF], [protobuf >= 3.12.0])
 dnl Not necessary for recent autoconf versions but I think it makes things more
 dnl readable
 AC_SUBST([PROTOBUF_CFLAGS])
@@ -35,6 +41,12 @@ AC_SUBST([GRPC_LIBS])
 
 AC_PATH_PROG([PROTOC], [protoc], [])
 AS_IF([test "x$PROTOC" = x], [AC_MSG_ERROR([protoc not found])])
+
+AC_SUBST([PROTOC_VERSION], [`$PROTOC --version | cut -d ' ' -f 2`])
+AX_COMPARE_VERSION([$PROTOC_VERSION], [lt], [3.12], [AC_MSG_ERROR([unsupported protoc version $PROTOC_VERSION, should be >= 3.12])])
+PROTOFLAGS=""
+AX_COMPARE_VERSION([$PROTOC_VERSION], [lt], [3.15], [PROTOFLAGS="$PROTOFLAGS --experimental_allow_proto3_optional"])
+AC_SUBST([PROTOFLAGS])
 
 AC_PATH_PROG([GRPC_CPP_PLUGIN], [grpc_cpp_plugin])
 AS_IF([test "x$GRPC_CPP_PLUGIN" = x], [
@@ -50,9 +62,7 @@ AM_CONDITIONAL([HAVE_GRPC_PY_PLUGIN], [test "x$GRPC_PY_PLUGIN" != x])
 
 AX_BOOST_BASE([1.54.0], [], [AC_MSG_ERROR(
               [Please install boost >= 1.54.0 (thread and system)])])
-AX_BOOST_THREAD
 AX_BOOST_SYSTEM
-AC_SUBST([BOOST_THREAD_LIB])
 AC_SUBST([BOOST_SYSTEM_LIB])
 
 want_bmv2=no
