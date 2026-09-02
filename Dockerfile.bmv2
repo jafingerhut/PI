@@ -39,9 +39,9 @@ ARG CXX=g++
 
 ENV PI_DEPS automake \
             build-essential \
-            clang-8 \
-            clang-10 \
-            clang-format-8 \
+            clang-18 \
+            clang-17 \
+            clang-format-18 \
             g++ \
             libboost-dev \
             libboost-system-dev \
@@ -54,8 +54,8 @@ ENV PI_DEPS automake \
             libmicrohttpd-dev \
             doxygen \
             valgrind
-ENV PI_RUNTIME_DEPS libboost-system1.71.0 \
-                    libboost-thread1.71.0 \
+ENV PI_RUNTIME_DEPS libboost-system1.83.0 \
+                    libboost-thread1.83.0 \
                     libpcap0.8 \
                     python3 \
                     python-is-python3

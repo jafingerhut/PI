@@ -36,10 +36,10 @@ jobs:
         include:
         - cxx: g++
           cc: gcc
-        - cxx: clang++-8
-          cc: clang-8
-        - cxx: clang++-10
-          cc: clang-10
+        - cxx: clang++-18
+          cc: clang-18
+        - cxx: clang++-17
+          cc: clang-17
     steps:
     - uses: actions/checkout@v7
       with:
