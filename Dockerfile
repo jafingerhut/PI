@@ -15,7 +15,7 @@
 
 # Antonin Bas (antonin@barefootnetworks.com)
 
-FROM p4lang/third-party:latest-24
+FROM p4lang/third-party:latest
 LABEL maintainer="P4 Developers <p4-dev@lists.p4.org>"
 LABEL description="This Docker image includes only the most widely-used PI \
 artifacts: PI core and P4Runtime. It does not include the Thrift-based PI \
