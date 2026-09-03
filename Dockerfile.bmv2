@@ -66,6 +66,9 @@ WORKDIR /PI/
 RUN apt-get update && \
     apt-get install -y --no-install-recommends $PI_DEPS $PI_RUNTIME_DEPS && \
     ./autogen.sh && \
+    # TODO: Change --without-proto to --with-proto when we learn how
+    # to get that part of the code compiling with Ubuntu 24.04 or
+    # later.
     ./configure --enable-Werror --with-bmv2 --without-proto --with-cli --with-internal-rpc --with-sysrepo && \
     ./proto/sysrepo/install_yangs.sh && \
     make && \
