@@ -66,11 +66,6 @@ WORKDIR /PI/
 RUN apt-get update && \
     apt-get install -y --no-install-recommends $PI_DEPS $PI_RUNTIME_DEPS && \
     ./autogen.sh && \
-    # try1: original version that leads to compilation error
-    #./configure --enable-Werror --with-bmv2 --with-proto --with-cli --with-internal-rpc --with-sysrepo && \
-    # try2
-    #./configure --enable-Werror --without-bmv2 --with-proto --with-cli --with-internal-rpc --with-sysrepo && \
-    # try3
     ./configure --enable-Werror --with-bmv2 --without-proto --with-cli --with-internal-rpc --with-sysrepo && \
     ./proto/sysrepo/install_yangs.sh && \
     make && \
