@@ -34,6 +34,8 @@ jobs:
     strategy:
       matrix:
         include:
+        - cxx: clang++-18
+          cc: clang-18
         - cxx: g++
           cc: gcc
     steps:
