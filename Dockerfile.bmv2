@@ -41,7 +41,7 @@ ENV PI_DEPS automake \
             build-essential \
             clang-18 \
             clang-17 \
-            clang-format-18 \
+            clang-format \
             g++ \
             libboost-dev \
             libboost-system-dev \
