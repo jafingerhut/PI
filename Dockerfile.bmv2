@@ -33,14 +33,13 @@ ARG MAKEFLAGS=-j2
 ARG IMAGE_TYPE=build
 
 # Select the compiler to use.
-# We install the default version of GCC (GCC 9), as well as clang 8 and clang 10.
+# We install the default version of GCC, as well as clang
 ARG CC=gcc
 ARG CXX=g++
 
 ENV PI_DEPS automake \
             build-essential \
-            clang-18 \
-            clang-17 \
+            clang \
             clang-format \
             g++ \
             libboost-dev \
