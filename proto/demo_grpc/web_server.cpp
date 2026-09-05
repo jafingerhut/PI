@@ -178,10 +178,11 @@ int perform_requested_ops_and_respond(struct MHD_Connection *connection,
   return send_page(connection, generate_page(con_info->web_server, con_info));
 }
 
-int answer_to_connection(void *cls, struct MHD_Connection *connection,
-                         const char *url, const char *method,
-                         const char *version, const char *upload_data,
-                         size_t *upload_data_size, void **con_cls) {
+enum MHD_Result
+answer_to_connection(void *cls, struct MHD_Connection *connection,
+                     const char *url, const char *method,
+                     const char *version, const char *upload_data,
+                     size_t *upload_data_size, void **con_cls) {
   WebServer *server = static_cast<WebServer *>(cls);
   if (!*con_cls) {
     struct connection_info_struct *con_info;
