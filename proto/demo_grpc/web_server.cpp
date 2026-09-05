@@ -101,10 +101,11 @@ int send_page(struct MHD_Connection *connection, const char *page) {
   return ret;
 }
 
-int iterate_post(void *coninfo_cls, enum MHD_ValueKind kind, const char *key,
-                 const char *filename, const char *content_type,
-                 const char *transfer_encoding, const char *data, uint64_t off,
-                 size_t size) {
+enum MHD_Result
+iterate_post(void *coninfo_cls, enum MHD_ValueKind kind, const char *key,
+             const char *filename, const char *content_type,
+             const char *transfer_encoding, const char *data, uint64_t off,
+             size_t size) {
   connection_info_struct *con_info = static_cast<connection_info_struct *>(
       coninfo_cls);
   if (!strncmp(key, "counter_name", sizeof "counter_name")) {
