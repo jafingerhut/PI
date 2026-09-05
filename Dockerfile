@@ -40,8 +40,8 @@ ENV PI_DEPS automake \
             libboost-thread-dev \
             libtool \
             pkg-config
-ENV PI_RUNTIME_DEPS libboost-system1.74.0 \
-                    libboost-thread1.74.0 \
+ENV PI_RUNTIME_DEPS libboost-system1.83.0 \
+                    libboost-thread1.83.0 \
                     python3 \
                     python-is-python3
 
