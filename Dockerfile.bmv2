@@ -20,6 +20,7 @@ LABEL maintainer="P4 Developers <p4-dev@lists.p4.org>"
 LABEL description="This Docker image includes all of the PI artifacts, \
 including the Thrift-based PI implementation for the bmv2 backend. It is \
 currently used to run CI tests."
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Default to using 2 make jobs, which is a good default for CI. If you're
 # building locally or you know there are more cores available, you may want to
@@ -62,6 +63,7 @@ ENV PI_RUNTIME_DEPS libboost-system1.83.0 \
 COPY proto/sysrepo/docker_entry_point.sh /docker_entry_point.sh
 COPY . /PI/
 WORKDIR /PI/
+RUN echo "The active shell is: $0"
 RUN apt-get update && \
     apt-get install -y --no-install-recommends $PI_DEPS $PI_RUNTIME_DEPS && \
     ./autogen.sh && \
