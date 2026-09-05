@@ -78,13 +78,13 @@ RUN apt-get update && \
     echo "Just after install_yangs.sh" && \
     make && \
     make install-strip && \
-    (test "$IMAGE_TYPE" = "build" && \
+    ((test "$IMAGE_TYPE" = "build" && \
       apt-get purge -y $PI_DEPS && \
       apt-get autoremove --purge -y && \
       rm -rf /PI /var/cache/apt/* /var/lib/apt/lists/* && \
       echo 'Build image ready') || \
     (test "$IMAGE_TYPE" = "test" && \
-      echo 'Test image ready')
+      echo 'Test image ready'))
 
 # start sysrepo daemon (sysrepod)
 ENTRYPOINT ["/docker_entry_point.sh"]
