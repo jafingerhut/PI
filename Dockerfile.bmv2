@@ -69,7 +69,11 @@ RUN apt-get update && \
     # to get that part of the code compiling with Ubuntu 24.04 or
     # later.
     ./configure --enable-Werror --with-bmv2 --without-proto --with-cli --with-internal-rpc --with-sysrepo && \
+    printenv | sort && \
+    uv pip list && \
+    echo "Just before install_yangs.sh" && \
     ./proto/sysrepo/install_yangs.sh && \
+    echo "Just after install_yangs.sh" && \
     make && \
     make install-strip && \
     (test "$IMAGE_TYPE" = "build" && \
