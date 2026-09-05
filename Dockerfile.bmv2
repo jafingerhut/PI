@@ -52,8 +52,8 @@ ENV PI_DEPS automake \
             libmicrohttpd-dev \
             doxygen \
             valgrind
-ENV PI_RUNTIME_DEPS libboost-system1.71.0 \
-                    libboost-thread1.71.0 \
+ENV PI_RUNTIME_DEPS libboost-system1.83.0 \
+                    libboost-thread1.83.0 \
                     libpcap0.8 \
                     python3 \
                     python-is-python3
